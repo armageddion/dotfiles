@@ -25,11 +25,27 @@ Item {
             visible: Config.options.bar.utilButtons.showScreenSnip
             sourceComponent: CircleUtilButton {
                 Layout.alignment: Qt.AlignVCenter
-                onClicked: Quickshell.execDetached(["qs", "-p", Quickshell.shellPath("screenshot.qml")])
+                onClicked: Hyprland.dispatch("global quickshell:regionScreenshot")
                 MaterialSymbol {
                     horizontalAlignment: Qt.AlignHCenter
                     fill: 1
                     text: "screenshot_region"
+                    iconSize: Appearance.font.pixelSize.large
+                    color: Appearance.colors.colOnLayer2
+                }
+            }
+        }
+
+        Loader {
+            active: Config.options.bar.utilButtons.showScreenRecord
+            visible: Config.options.bar.utilButtons.showScreenRecord
+            sourceComponent: CircleUtilButton {
+                Layout.alignment: Qt.AlignVCenter
+                onClicked: Quickshell.execDetached([Directories.recordScriptPath])
+                MaterialSymbol {
+                    horizontalAlignment: Qt.AlignHCenter
+                    fill: 1
+                    text: "videocam"
                     iconSize: Appearance.font.pixelSize.large
                     color: Appearance.colors.colOnLayer2
                 }
@@ -129,9 +145,9 @@ Item {
                     horizontalAlignment: Qt.AlignHCenter
                     fill: 0
                     text: switch(PowerProfiles.profile) {
-                        case PowerProfile.PowerSaver: return "battery_saver"
-                        case PowerProfile.Balanced: return "dynamic_form"
-                        case PowerProfile.Performance: return "speed"
+                        case PowerProfile.PowerSaver: return "energy_savings_leaf"
+                        case PowerProfile.Balanced: return "settings_slow_motion"
+                        case PowerProfile.Performance: return "local_fire_department"
                     }
                     iconSize: Appearance.font.pixelSize.large
                     color: Appearance.colors.colOnLayer2

@@ -1,11 +1,5 @@
-import qs
-import qs.services
-import qs.modules.common
-import qs.modules.common.widgets
-import qs.modules.common.functions
 import "periodic_table.js" as PTable
 import QtQuick
-import QtQuick.Layouts
 
 Item {
     id: root
@@ -15,14 +9,15 @@ Item {
     implicitWidth: mainLayout.implicitWidth
     implicitHeight: mainLayout.implicitHeight
 
-    ColumnLayout {
+    Column {
         id: mainLayout
+        anchors.centerIn: parent
         spacing: root.spacing
 
         Repeater { // Main table rows
             model: root.elements
             
-            delegate: RowLayout { // Table cells
+            delegate: Row { // Table cells
                 id: tableRow
                 spacing: root.spacing
                 required property var modelData
@@ -47,7 +42,7 @@ Item {
         Repeater { // Main table rows
             model: root.series
             
-            delegate: RowLayout { // Table cells
+            delegate: Row { // Table cells
                 id: seriesTableRow
                 spacing: root.spacing
                 required property var modelData

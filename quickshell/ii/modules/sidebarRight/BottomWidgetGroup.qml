@@ -1,9 +1,9 @@
 import qs.modules.common
 import qs.modules.common.widgets
-import qs
 import qs.services
-import "./calendar"
-import "./todo"
+import qs.modules.sidebarRight.calendar
+import qs.modules.sidebarRight.todo
+import qs.modules.sidebarRight.pomodoro
 import QtQuick
 import QtQuick.Layouts
 
@@ -17,7 +17,8 @@ Rectangle {
     property bool collapsed: Persistent.states.sidebar.bottomGroup.collapsed
     property var tabs: [
         {"type": "calendar", "name": Translation.tr("Calendar"), "icon": "calendar_month", "widget": calendarWidget}, 
-        {"type": "todo", "name": Translation.tr("To Do"), "icon": "done_outline", "widget": todoWidget}
+        {"type": "todo", "name": Translation.tr("To Do"), "icon": "done_outline", "widget": todoWidget},
+        {"type": "timer", "name": Translation.tr("Timer"), "icon": "schedule", "widget": pomodoroWidget},
     ]
 
     Behavior on implicitHeight {
@@ -81,7 +82,7 @@ Rectangle {
             Layout.margins: 10
             Layout.rightMargin: 0
             forceCircle: true
-            onClicked: {
+            downAction: () => {
                 root.setCollapsed(false)
             }
             contentItem: MaterialSymbol {
@@ -144,7 +145,7 @@ Rectangle {
                         toggled: root.selectedTab == index
                         buttonText: modelData.name
                         buttonIcon: modelData.icon
-                        onClicked: {
+                        onPressed: {
                             root.selectedTab = index
                             Persistent.states.sidebar.bottomGroup.tab = index
                         }
@@ -156,7 +157,7 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.top: parent.top
                 forceCircle: true
-                onClicked: {
+                downAction: () => {
                     root.setCollapsed(true)
                 }
                 contentItem: MaterialSymbol {
@@ -226,7 +227,8 @@ Rectangle {
         id: calendarWidget
 
         CalendarWidget {
-            anchors.centerIn: parent
+            anchors.fill: parent
+            anchors.margins: 5
         }
     }
 
@@ -234,6 +236,15 @@ Rectangle {
     Component {
         id: todoWidget
         TodoWidget {
+            anchors.fill: parent
+            anchors.margins: 5
+        }
+    }
+
+    // Pomodoro component
+    Component {
+        id: pomodoroWidget
+        PomodoroWidget {
             anchors.fill: parent
             anchors.margins: 5
         }

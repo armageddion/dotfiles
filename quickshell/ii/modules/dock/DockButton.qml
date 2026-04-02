@@ -1,8 +1,6 @@
-import qs
 import qs.modules.common
 import qs.modules.common.widgets
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 
 RippleButton {
@@ -11,6 +9,5 @@ RippleButton {
     implicitWidth: implicitHeight - topInset - bottomInset
     buttonRadius: Appearance.rounding.normal
 
-    topInset: Appearance.sizes.hyprlandGapsOut + dockRow.padding
-    bottomInset: Appearance.sizes.hyprlandGapsOut + dockRow.padding
+    background.implicitHeight: 50
 }

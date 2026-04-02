@@ -3,7 +3,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
-import "./anime/"
+import qs.modules.sidebarLeft.anime
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -12,6 +12,8 @@ import Quickshell
 
 Item {
     id: root
+    property real padding: 4
+
     property var inputField: tagInputField
     readonly property var responses: Booru.responses
     property string previewDownloadPath: Directories.booruPreviews
@@ -23,11 +25,20 @@ Item {
     property var suggestionQuery: ""
     property var suggestionList: []
 
+    property bool pullLoading: false
+    property int pullLoadingGap: 80
+    property real normalizedPullDistance: Math.max(0, (1 - Math.exp(-booruResponseListView.verticalOvershoot / 50)) * booruResponseListView.dragging)
+
     Connections {
         target: Booru
         function onTagSuggestion(query, suggestions) {
             root.suggestionQuery = query;
             root.suggestionList = suggestions;
+        }
+        function onRunningRequestsChanged() {
+            if (Booru.runningRequests === 0) {
+                root.pullLoading = false;
+            }
         }
     }
 
@@ -53,6 +64,8 @@ Item {
                 if (root.responses.length > 0) {
                     const lastResponse = root.responses[root.responses.length - 1];
                     root.handleInput(`${lastResponse.tags.join(" ")} ${parseInt(lastResponse.page) + 1}`);
+                } else {
+                    root.handleInput("");
                 }
             }
         },
@@ -85,10 +98,7 @@ Item {
             }
         }
         else if (inputText.trim() == "+") {
-            if (root.responses.length > 0) {
-                const lastResponse = root.responses[root.responses.length - 1]
-                root.handleInput(lastResponse.tags.join(" ") + ` ${parseInt(lastResponse.page) + 1}`);
-            }
+            root.handleInput(`${root.commandPrefix}next`);
         }
         else {
             // Create tag list
@@ -111,62 +121,76 @@ Item {
         }
     }
 
+    property real pageKeyScrollAmount: booruResponseListView.height / 2
     Keys.onPressed: (event) => {
         tagInputField.forceActiveFocus()
         if (event.modifiers === Qt.NoModifier) {
             if (event.key === Qt.Key_PageUp) {
-                booruResponseListView.contentY = Math.max(0, booruResponseListView.contentY - booruResponseListView.height / 2)
+                if (booruResponseListView.atYBeginning) return;
+                booruResponseListView.contentY = Math.max(0, booruResponseListView.contentY - root.pageKeyScrollAmount)
                 event.accepted = true
             } else if (event.key === Qt.Key_PageDown) {
-                booruResponseListView.contentY = Math.min(booruResponseListView.contentHeight - booruResponseListView.height / 2, booruResponseListView.contentY + booruResponseListView.height / 2)
+                if (booruResponseListView.atYEnd) return;
+                booruResponseListView.contentY = Math.min(booruResponseListView.contentHeight, booruResponseListView.contentY + root.pageKeyScrollAmount)
                 event.accepted = true
             }
+        }
+        if ((event.modifiers & Qt.ControlModifier) && (event.modifiers & Qt.ShiftModifier) && event.key === Qt.Key_O) {
+            Booru.clearResponses()
         }
     }
 
 
     ColumnLayout {
         id: columnLayout
-        anchors.fill: parent
+        anchors {
+            fill: parent
+            margins: root.padding
+        }
+        spacing: root.padding
 
         Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
+
+            layer.enabled: true
+            layer.effect: OpacityMask {
+                maskSource: Rectangle {
+                    width: swipeView.width
+                    height: swipeView.height
+                    radius: Appearance.rounding.small
+                }
+            }
+
+            ScrollEdgeFade {
+                z: 1
+                target: booruResponseListView
+                vertical: true
+            }
+
             StyledListView { // Booru responses
                 id: booruResponseListView
+                z: 0
                 anchors.fill: parent
                 spacing: 10
                 
+                touchpadScrollFactor: Config.options.interactions.scrolling.touchpadScrollFactor * 1.4
+                mouseScrollFactor: Config.options.interactions.scrolling.mouseScrollFactor * 1.4
+
                 property int lastResponseLength: 0
-
-                clip: true
-                layer.enabled: true
-                layer.effect: OpacityMask {
-                    maskSource: Rectangle {
-                        width: swipeView.width
-                        height: swipeView.height
-                        radius: Appearance.rounding.small
-                    }
-                }
-
-                Behavior on contentY {
-                    NumberAnimation {
-                        id: scrollAnim
-                        duration: Appearance.animation.scroll.duration
-                        easing.type: Appearance.animation.scroll.type
-                        easing.bezierCurve: Appearance.animation.scroll.bezierCurve
-                    }
-                }
-
-                model: ScriptModel {
-                    values: {
-                        if(root.responses.length > booruResponseListView.lastResponseLength) {
+                Connections {
+                    target: root
+                    function onResponsesChanged() {
+                        if (root.responses.length > booruResponseListView.lastResponseLength) {
                             if (booruResponseListView.lastResponseLength > 0 && root.responses[booruResponseListView.lastResponseLength].provider != "system")
                                 booruResponseListView.contentY = booruResponseListView.contentY + root.scrollOnNewResponse
                             booruResponseListView.lastResponseLength = root.responses.length
                         }
-                        return root.responses
                     }
+                }
+
+                model: ScriptModel {
+                    values: root.responses
                 }
                 delegate: BooruResponse {
                     responseData: modelData
@@ -175,74 +199,49 @@ Item {
                     downloadPath: root.downloadPath
                     nsfwPath: root.nsfwPath
                 }
-            }
 
-            Item { // Placeholder when list is empty
-                opacity: root.responses.length === 0 ? 1 : 0
-                visible: opacity > 0
-                anchors.fill: parent
-
-                Behavior on opacity {
-                    animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
-                }
-
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: 5
-
-                    MaterialSymbol {
-                        Layout.alignment: Qt.AlignHCenter
-                        iconSize: 60
-                        color: Appearance.m3colors.m3outline
-                        text: "bookmark_heart"
-                    }
-                    StyledText {
-                        id: widgetNameText
-                        Layout.alignment: Qt.AlignHCenter
-                        font.pixelSize: Appearance.font.pixelSize.larger
-                        font.family: Appearance.font.family.title
-                        color: Appearance.m3colors.m3outline
-                        horizontalAlignment: Text.AlignHCenter
-                        text: Translation.tr("Anime boorus")
+                onDragEnded: { // Pull to load more
+                    const gap = booruResponseListView.verticalOvershoot
+                    if (gap > root.pullLoadingGap) {
+                        root.pullLoading = true
+                        root.handleInput(`${root.commandPrefix}next`)
                     }
                 }
             }
 
-            Item { // Queries awaiting response
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.margins: 10
-                implicitHeight: pendingBackground.implicitHeight
-                opacity: Booru.runningRequests > 0 ? 1 : 0
-                visible: opacity > 0
+            PagePlaceholder {
+                id: placeholderItem
+                z: 2
+                shown: root.responses.length === 0
+                icon: "bookmark_heart"
+                title: Translation.tr("Anime boorus")
+                description: ""
+                shape: MaterialShape.Shape.Bun
+            }
 
-                Behavior on opacity {
-                    animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
-                }
+            ScrollToBottomButton {
+                z: 3
+                target: booruResponseListView
+            }
 
-                Rectangle {
-                    id: pendingBackground
-                    color: Appearance.m3colors.m3inverseSurface
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    implicitHeight: pendingText.implicitHeight + 12 * 2
-                    radius: Appearance.rounding.verysmall
-
-                    StyledText {
-                        id: pendingText
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.leftMargin: 12
-                        anchors.rightMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        font.pixelSize: Appearance.font.pixelSize.smaller
-                        color: Appearance.m3colors.m3inverseOnSurface
-                        wrapMode: Text.Wrap
-                        text: Translation.tr("%1 queries pending").arg(Booru.runningRequests)
+            MaterialLoadingIndicator {
+                id: loadingIndicator
+                z: 4
+                anchors {
+                    horizontalCenter: parent.horizontalCenter
+                    bottom: parent.bottom
+                    bottomMargin: 20 + (root.pullLoading ? 0 : Math.max(0, (root.normalizedPullDistance - 0.5) * 50))
+                    Behavior on bottomMargin {
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: Appearance.animationCurves.expressiveFastSpatial
+                        }
                     }
                 }
+                loading: root.pullLoading || Booru.runningRequests > 0
+                pullProgress: Math.min(1, booruResponseListView.verticalOvershoot / root.pullLoadingGap * booruResponseListView.dragging)
+                scale: root.pullLoading ? 1 : Math.min(1, root.normalizedPullDistance * 2)
             }
         }
 
@@ -324,14 +323,12 @@ Item {
             id: tagInputContainer
             property real columnSpacing: 5
             Layout.fillWidth: true
-            radius: Appearance.rounding.small
-            color: Appearance.colors.colLayer1
+            radius: Appearance.rounding.normal - root.padding
+            color: Appearance.colors.colLayer2
             implicitWidth: tagInputField.implicitWidth
             implicitHeight: Math.max(inputFieldRowLayout.implicitHeight + inputFieldRowLayout.anchors.topMargin 
                 + commandButtonsRow.implicitHeight + commandButtonsRow.anchors.bottomMargin + columnSpacing, 45)
             clip: true
-            border.color: Appearance.colors.colOutlineVariant
-            border.width: 1
 
             Behavior on implicitHeight {
                 animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
@@ -463,10 +460,9 @@ Item {
                     contentItem: MaterialSymbol {
                         anchors.centerIn: parent
                         horizontalAlignment: Text.AlignHCenter
-                        iconSize: Appearance.font.pixelSize.larger
-                        // fill: sendButton.enabled ? 1 : 0
+                        iconSize: 22
                         color: sendButton.enabled ? Appearance.m3colors.m3onPrimary : Appearance.colors.colOnLayer2Disabled
-                        text: "send"
+                        text: "arrow_upward"
                     }
                 }
             }
@@ -506,23 +502,21 @@ Item {
                     text: "•"
                 }
 
-                Item { // NSFW toggle
+                MouseArea { // NSFW toggle
                     visible: width > 0
                     implicitWidth: switchesRow.implicitWidth
                     Layout.fillHeight: true
+
+                    hoverEnabled: true
+                    PointingHandInteraction {}
+                    onPressed: {
+                        nsfwSwitch.checked = !nsfwSwitch.checked
+                    }
 
                     RowLayout {
                         id: switchesRow
                         spacing: 5
                         anchors.centerIn: parent
-
-                        MouseArea {
-                            hoverEnabled: true
-                            PointingHandInteraction {}
-                            onClicked: {
-                                nsfwSwitch.checked = !nsfwSwitch.checked
-                            }
-                        }
 
                         StyledText {
                             Layout.fillHeight: true
@@ -544,6 +538,7 @@ Item {
                             }
                         }
                     }
+
                 }
 
                 Item { Layout.fillWidth: true }
@@ -558,8 +553,8 @@ Item {
                             buttonText: commandRepresentation
                             colBackground: Appearance.colors.colLayer2
 
-                            onClicked: {
-                                if(modelData.sendDirectly) {
+                            downAction: () => {
+                                if (modelData.sendDirectly) {
                                     root.handleInput(commandRepresentation)
                                 } else {
                                     tagInputField.text = commandRepresentation + " "

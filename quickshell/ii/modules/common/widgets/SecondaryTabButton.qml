@@ -30,7 +30,8 @@ TabButton {
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onPressed: (event) => { 
+        onPressed: (event) => {
+            root.click() // Because the MouseArea already consumed the event
             const {x,y} = event
             const stateY = buttonBackground.y;
             rippleAnim.x = x;
@@ -44,13 +45,13 @@ TabButton {
             rippleAnim.restart();
         }
         onReleased: (event) => {
-            root.click() // Because the MouseArea already consumed the event
             rippleFadeAnim.restart();
         }
     }
 
     RippleAnim {
         id: rippleFadeAnim
+        duration: rippleDuration * 2
         target: ripple
         property: "opacity"
         to: 0
@@ -90,7 +91,7 @@ TabButton {
 
     background: Rectangle {
         id: buttonBackground
-        radius: Appearance?.rounding.small ?? 7
+        radius: Appearance?.rounding.normal
         implicitHeight: 37
         color: (root.hovered ? root.colBackgroundHover : root.colBackground)
         layer.enabled: true
@@ -106,12 +107,28 @@ TabButton {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
         }
 
-        Rectangle {
+        Item {
             id: ripple
-
-            radius: Appearance.rounding.full
-            color: root.colRipple
+            width: ripple.implicitWidth
+            height: ripple.implicitHeight
             opacity: 0
+
+            property real implicitWidth: 0
+            property real implicitHeight: 0
+            visible: width > 0 && height > 0
+
+            Behavior on opacity {
+                animation: Appearance?.animation.elementMoveFast.colorAnimation.createObject(this)
+            }
+
+            RadialGradient {
+                anchors.fill: parent
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: root.colRipple }
+                    GradientStop { position: 0.3; color: root.colRipple }
+                    GradientStop { position: 0.5 ; color: Qt.rgba(root.colRipple.r, root.colRipple.g, root.colRipple.b, 0) }
+                }
+            }
 
             transform: Translate {
                 x: -ripple.width / 2

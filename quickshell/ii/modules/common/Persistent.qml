@@ -11,23 +11,53 @@ Singleton {
     property string fileName: "states.json"
     property string filePath: `${root.fileDir}/${root.fileName}`
 
+    property bool ready: false
+    property string previousHyprlandInstanceSignature: ""
+    property bool isNewHyprlandInstance: previousHyprlandInstanceSignature !== states.hyprlandInstanceSignature
+
+    onReadyChanged: {
+        root.previousHyprlandInstanceSignature = root.states.hyprlandInstanceSignature
+        root.states.hyprlandInstanceSignature = Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") || ""
+    }
+
+    Timer {
+        id: fileReloadTimer
+        interval: 100
+        repeat: false
+        onTriggered: {
+            persistentStatesFileView.reload()
+        }
+    }
+
+    Timer {
+        id: fileWriteTimer
+        interval: 100
+        repeat: false
+        onTriggered: {
+            persistentStatesFileView.writeAdapter()
+        }
+    }
+
     FileView {
+        id: persistentStatesFileView
         path: root.filePath
 
         watchChanges: true
-        onFileChanged: reload()
-        onAdapterUpdated: {
-            writeAdapter()
-        }
+        onFileChanged: fileReloadTimer.restart()
+        onAdapterUpdated: fileWriteTimer.restart()
+        onLoaded: root.ready = true
         onLoadFailed: error => {
             console.log("Failed to load persistent states file:", error);
             if (error == FileViewError.FileNotFound) {
-                writeAdapter();
+                fileWriteTimer.restart();
             }
         }
 
         adapter: JsonAdapter {
             id: persistentStatesJsonAdapter
+
+            property string hyprlandInstanceSignature: ""
+
             property JsonObject ai: JsonObject {
                 property string model
                 property real temperature: 0.5
@@ -43,6 +73,24 @@ Singleton {
             property JsonObject booru: JsonObject {
                 property bool allowNsfw: false
                 property string provider: "yandere"
+            }
+
+            property JsonObject idle: JsonObject {
+                property bool inhibit: false
+            }
+
+            property JsonObject timer: JsonObject {
+                property JsonObject pomodoro: JsonObject {
+                    property bool running: false
+                    property int start: 0
+                    property bool isBreak: false
+                    property int cycle: 0
+                }
+                property JsonObject stopwatch: JsonObject {
+                    property bool running: false
+                    property int start: 0
+                    property list<var> laps: []
+                }
             }
         }
     }

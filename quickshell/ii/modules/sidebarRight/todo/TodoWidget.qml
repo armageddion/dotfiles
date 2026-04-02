@@ -1,4 +1,3 @@
-import qs
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -84,7 +83,7 @@ Item {
                 id: indicator
                 property int tabCount: root.tabButtonList.length
                 property real fullTabSize: root.width / tabCount;
-                property real targetWidth: tabBar.contentItem.children[0].children[tabBar.currentIndex].tabContentWidth
+                property real targetWidth: tabBar?.contentItem?.children[0]?.children[tabBar.currentIndex]?.tabContentWidth ?? 0
 
                 implicitWidth: targetWidth
                 anchors {
@@ -164,13 +163,7 @@ Item {
         anchors.bottomMargin: root.fabMargins
 
         onClicked: root.showAddDialog = true
-
-        contentItem: MaterialSymbol {
-            text: "add"
-            horizontalAlignment: Text.AlignHCenter
-            iconSize: Appearance.font.pixelSize.huge
-            color: Appearance.m3colors.m3onPrimaryContainer
-        }
+        iconText: "add"
     }
 
     Item {

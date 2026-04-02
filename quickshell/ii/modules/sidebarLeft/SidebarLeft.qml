@@ -10,7 +10,6 @@ import Quickshell.Hyprland
 
 Scope { // Scope
     id: root
-    property int sidebarPadding: 15
     property bool detach: false
     property Component contentComponent: SidebarLeftContent {}
     property Item sidebarContent
@@ -127,8 +126,13 @@ Scope { // Scope
 
         sourceComponent: FloatingWindow {
             id: detachedSidebarRoot
-            visible: GlobalStates.sidebarLeftOpen
             property var contentParent: detachedSidebarBackground
+            color: "transparent"
+
+            visible: GlobalStates.sidebarLeftOpen
+            onVisibleChanged: {
+                if (!visible) GlobalStates.sidebarLeftOpen = false;
+            }
             
             Rectangle {
                 id: detachedSidebarBackground

@@ -3,8 +3,7 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
-import "../"
-import qs.services
+import qs.modules.sidebarLeft
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -101,11 +100,8 @@ Rectangle {
             id: tagsFlickable
             visible: root.responseData.tags.length > 0
             Layout.alignment: Qt.AlignLeft
-            Layout.fillWidth: {
-                return true
-            }
+            Layout.fillWidth: true
             implicitHeight: tagRowLayout.implicitHeight
-            // height: tagRowLayout.implicitHeight
             contentWidth: tagRowLayout.implicitWidth
 
             clip: true
@@ -118,9 +114,6 @@ Rectangle {
                 }
             }
 
-            Behavior on height {
-                animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
-            }
             Behavior on implicitHeight {
                 animation: Appearance.animation.elementMove.numberAnimation.createObject(this)
             }
@@ -237,7 +230,7 @@ Rectangle {
                         rowHeight: imageRow.rowHeight
                         imageRadius: imageRow.modelData.images.length == 1 ? 50 : Appearance.rounding.normal
                         // Download manually to reduce redundant requests or make sure downloading works
-                        // manualDownload: ["danbooru", "waifu.im", "t.alcy.cc"].includes(root.responseData.provider)
+                        manualDownload: ["danbooru", "waifu.im", "t.alcy.cc"].includes(root.responseData.provider)
                         previewDownloadPath: root.previewDownloadPath
                         downloadPath: root.downloadPath
                         nsfwPath: root.nsfwPath

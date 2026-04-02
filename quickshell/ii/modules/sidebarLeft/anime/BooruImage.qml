@@ -1,4 +1,4 @@
-import qs
+import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
@@ -15,7 +15,7 @@ Button {
     id: root
     property var imageData
     property var rowHeight
-    property bool manualDownload: true
+    property bool manualDownload: false
     property string previewDownloadPath
     property string downloadPath
     property string nsfwPath
@@ -28,7 +28,7 @@ Button {
     Process {
         id: downloadProcess
         running: false
-        command: ["bash", "-c", `[ -f ${root.filePath} ] || curl -sSL '${root.imageData.preview_url ?? root.imageData.sample_url}' -o '${root.filePath}'`]
+        command: ["bash", "-c", `mkdir -p '${root.previewDownloadPath}' && [ -f ${root.filePath} ] || curl -sSL '${root.imageData.preview_url ?? root.imageData.sample_url}' -o '${root.filePath}'`]
         onExited: (exitCode, exitStatus) => {
             imageObject.source = `${previewDownloadPath}/${root.fileName}`
         }
@@ -41,7 +41,7 @@ Button {
     }
 
     StyledToolTip {
-        content: `${StringUtils.wordWrap(root.imageData.tags, root.maxTagStringLineLength)}`
+        text: `${StringUtils.wordWrap(root.imageData.tags, root.maxTagStringLineLength)}`
     }
 
     padding: 0
@@ -58,13 +58,11 @@ Button {
     contentItem: Item {
         anchors.fill: parent
 
-        Image {
+        StyledImage {
             id: imageObject
             anchors.fill: parent
             width: root.rowHeight * modelData.aspect_ratio
             height: root.rowHeight
-            visible: opacity > 0
-            opacity: status === Image.Ready ? 1 : 0
             fillMode: Image.PreserveAspectFit
             source: modelData.preview_url
             sourceSize.width: root.rowHeight * modelData.aspect_ratio
@@ -77,10 +75,6 @@ Button {
                     height: root.rowHeight
                     radius: imageRadius
                 }
-            }
-
-            Behavior on opacity {
-                animation: Appearance.animation.elementMoveEnter.numberAnimation.createObject(this)
             }
         }
 
@@ -176,9 +170,10 @@ Button {
                             Layout.fillWidth: true
                             buttonText: Translation.tr("Download")
                             onClicked: {
-                                root.showActions = false
+                                root.showActions = false;
+                                const targetPath = root.imageData.is_nsfw ? root.nsfwPath : root.downloadPath;
                                 Quickshell.execDetached(["bash", "-c", 
-                                    `curl '${root.imageData.file_url}' -o '${root.imageData.is_nsfw ? root.nsfwPath : root.downloadPath}/${root.fileName}' && notify-send '${Translation.tr("Download complete")}' '${root.downloadPath}/${root.fileName}' -a 'Shell'`
+                                    `mkdir -p '${targetPath}' && curl '${root.imageData.file_url}' -o '${targetPath}/${root.fileName}' && notify-send '${Translation.tr("Download complete")}' '${root.downloadPath}/${root.fileName}' -a 'Shell'`
                                 ])
                             }
                         }

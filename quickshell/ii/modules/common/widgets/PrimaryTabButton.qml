@@ -32,7 +32,8 @@ TabButton {
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onPressed: (event) => { 
+        onPressed: (event) => {
+            button.click() // Because the MouseArea already consumed the event
             const {x,y} = event
             const stateY = buttonBackground.y;
             rippleAnim.x = x;
@@ -46,13 +47,13 @@ TabButton {
             rippleAnim.restart();
         }
         onReleased: (event) => {
-            button.click() // Because the MouseArea already consumed the event
             rippleFadeAnim.restart();
         }
     }
 
     RippleAnim {
         id: rippleFadeAnim
+        duration: rippleDuration * 2
         target: ripple
         property: "opacity"
         to: 0
